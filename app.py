@@ -1,70 +1,78 @@
 import streamlit as st
 import random
 from fpdf import FPDF
-import base64
 
-# --- ตรรกะการสร้างโจทย์ (Logic) ---
-def get_problem(op):
-    if op == "Addition (+)":
+# --- 1. ตรรกะการคำนวณที่รองรับเฉลย ---
+def get_math_logic(op_type):
+    if op_type == "Addition (+)":
         a, b = random.randint(10, 99), random.randint(10, 99)
         return a, b, a + b, "+"
-    elif op == "Subtraction (-)":
+    elif op_type == "Subtraction (-)":
         a = random.randint(20, 99)
-        b = random.randint(10, a) # ป้องกันเลขติดลบ
+        b = random.randint(10, a)
         return a, b, a - b, "-"
-    elif op == "Multiplication (x)":
+    elif op_type == "Multiplication (x)":
         a, b = random.randint(2, 12), random.randint(2, 9)
         return a, b, a * b, "x"
-    else: # Division (/) - หารลงตัวเสมอ
+    else: # Division (/)
         b = random.randint(2, 9)
         ans = random.randint(2, 12)
         a = b * ans
         return a, b, ans, "/"
 
-# --- ฟังก์ชันสร้าง PDF ---
-def create_pdf(problems, brand_name):
+# --- 2. ฟังก์ชันสร้าง PDF แบบหลายหน้า ---
+def create_worksheet_pdf(op_type, num_pages, probs_per_page, brand_name):
     pdf = FPDF()
-    pdf.add_page()
-    # ใช้ Helvetica เป็นฟอนต์มาตรฐานเพื่อป้องกัน Error
-    pdf.set_font("Helvetica", 'B', 16)
-    pdf.cell(200, 10, txt=f"Math Worksheet: {brand_name}", ln=True, align='C')
-    pdf.ln(10)
+    pdf.set_auto_page_break(auto=True, margin=15)
     
-    pdf.set_font("Helvetica", size=14)
-    # จัดวางโจทย์เป็น 3 คอลัมน์ 4 แถว
-    for i in range(0, len(problems), 3):
-        chunk = problems[i:i+3]
-        y_start = pdf.get_y()
-        for idx, p in enumerate(chunk):
-            x_pos = 20 + (idx * 60)
-            pdf.text(x_pos, y_start, f"{i+idx+1})")
-            pdf.text(x_pos + 10, y_start + 5, f"{p[0]}")
-            pdf.text(x_pos + 6, y_start + 12, f"{p[3]} {p[1]}")
-            pdf.line(x_pos + 5, y_start + 14, x_pos + 25, y_start + 14)
-        pdf.ln(35)
-    
+    for page in range(num_pages):
+        pdf.add_page()
+        # ส่วนหัวกระดาษ
+        pdf.set_font("Helvetica", 'B', 20)
+        pdf.cell(0, 10, brand_name, ln=True, align='C')
+        pdf.set_font("Helvetica", '', 12)
+        pdf.cell(0, 10, f"Name: ______________________ Class: _______ Page: {page+1}", ln=True, align='C')
+        pdf.ln(15)
+
+        # การจัดวาง Grid (3 คอลัมน์)
+        col_width = 60
+        row_height = 45
+        for i in range(probs_per_page):
+            n1, n2, res, symbol = get_math_logic(op_type)
+            
+            # คำนวณตำแหน่ง X, Y
+            col = i % 3
+            row = i // 3
+            x = 25 + (col * col_width)
+            y = 45 + (row * row_height)
+
+            # วาดตัวเลขและเครื่องหมาย (จัดให้เครื่องหมายอยู่กลาง)
+            pdf.set_font("Helvetica", '', 18)
+            pdf.text(x + 10, y, f"{n1:2}")      # ตัวตั้ง
+            pdf.text(x - 2, y + 5, symbol)     # เครื่องหมายอยู่ระหว่างบรรทัด
+            pdf.text(x + 10, y + 8, f"{n2:2}")  # ตัวลบ/บวก
+            pdf.line(x + 8, y + 11, x + 25, y + 11) # เส้นใต้โจทย์
+            pdf.line(x + 8, y + 20, x + 25, y + 20) # เส้นคำตอบ
+            pdf.line(x + 8, y + 21, x + 25, y + 21)
+
     return pdf.output(dest='S').encode('latin-1')
 
-# --- หน้าตาเว็บไซต์ (UI) ---
-st.set_page_config(page_title="Math Worksheet Pro", layout="centered")
-st.title("🎨 Math Worksheet Generator")
+# --- 3. ส่วนแสดงผลบน Streamlit ---
+st.title("🔢 Multi-Page Worksheet Generator")
 
 with st.sidebar:
     st.header("Settings")
-    op_choice = st.selectbox("Operation", ["Addition (+)", "Subtraction (-)", "Multiplication (x)", "Division (/)"])
-    num_problems = st.slider("Problems per page", 6, 24, 12)
-    brand = st.text_input("Brand Name", "My Studio")
+    op = st.selectbox("Operation", ["Addition (+)", "Subtraction (-)", "Multiplication (x)", "Division (/)"])
+    pages = st.slider("Number of Pages", 1, 10, 1) # กำหนดจำนวนหน้า
+    probs = st.selectbox("Problems per Page", [12, 15, 18, 21])
+    brand = st.text_input("Brand Name", "CapyCap Math")
 
-if st.button("Generate Worksheet"):
-    st.session_state.problems = [get_problem(op_choice) for _ in range(num_problems)]
-    st.success("Worksheet Generated! Check preview below.")
-
-if 'problems' in st.session_state:
-    st.write("---")
-    st.write("### Preview")
-    cols = st.columns(3)
-    for i, p in enumerate(st.session_state.problems):
-        cols[i%3].write(f"**{i+1})** {p[0]} {p[3]} {p[1]} = ?")
-    
-    pdf_bytes = create_pdf(st.session_state.problems, brand)
-    st.download_button(label="📥 Download PDF", data=pdf_bytes, file_name="math_worksheet.pdf", mime="application/pdf")
+if st.button("Generate Worksheet PDF"):
+    pdf_file = create_worksheet_pdf(op, pages, probs, brand)
+    st.success(f"Success! Generated {pages} pages.")
+    st.download_button(
+        label="📥 Download PDF",
+        data=pdf_file,
+        file_name="worksheet_multi.pdf",
+        mime="application/pdf"
+    )
