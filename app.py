@@ -61,6 +61,7 @@ def create_full_worksheet(op_type, num_pages, probs_per_page, brand_name):
         all_answers.append(page_answers)
 
     # --- ส่วนการสร้างหน้าเฉลย (Answer Key) ---
+    # หากมีหลายหน้ามาก เฉลยอาจจะใช้หลายหน้าเช่นกัน
     pdf.add_page()
     pdf.set_font("Helvetica", 'B', 22)
     pdf.cell(0, 15, "ANSWER KEY", ln=True, align='C')
@@ -68,40 +69,45 @@ def create_full_worksheet(op_type, num_pages, probs_per_page, brand_name):
     pdf.ln(10)
 
     for p_idx, p_ans in enumerate(all_answers):
-        pdf.set_font("Helvetica", 'B', 16)
+        # ตรวจสอบว่าต้องขึ้นหน้าใหม่สำหรับเฉลยหรือไม่
+        if pdf.get_y() > 250:
+            pdf.add_page()
+        
+        pdf.set_font("Helvetica", 'B', 14)
         pdf.cell(0, 10, f"Page {p_idx + 1}", ln=True)
-        pdf.set_font("Helvetica", '', 14)
+        pdf.set_font("Helvetica", '', 12)
         
         ans_text = ""
         for a_idx, ans in enumerate(p_ans):
             ans_text += f"{a_idx+1}) {ans}    "
-            if (a_idx + 1) % 4 == 0:
-                pdf.cell(0, 10, ans_text, ln=True)
+            if (a_idx + 1) % 5 == 0: # ปรับให้แสดง 5 ข้อต่อบรรทัดในหน้าเฉลยเพื่อให้ประหยัดที่
+                pdf.cell(0, 8, ans_text, ln=True)
                 ans_text = ""
-        if ans_text: pdf.cell(0, 10, ans_text, ln=True)
-        pdf.ln(5)
+        if ans_text: pdf.cell(0, 8, ans_text, ln=True)
+        pdf.ln(2)
 
     return pdf.output(dest='S').encode('latin-1')
 
 # --- 3. ส่วนหน้าตาเว็บไซต์ Streamlit ---
-st.set_page_config(page_title="Pro Math Generator", layout="centered")
+st.set_page_config(page_title="Math Worksheet Pro (100 Pages)", layout="centered")
 st.title("📚 Professional Math Worksheet Generator")
-st.write("Create high-quality practice sheets for TPT, Etsy, or Classroom use.")
+st.write("Now supporting up to 100 pages for Mega Bundles!")
 
 with st.sidebar:
     st.header("Customization Settings")
     op = st.selectbox("1. Select Operation", ["Addition (+)", "Subtraction (-)", "Multiplication (x)", "Division (÷)"])
-    pages = st.slider("2. Number of Pages", 1, 10, 1)
+    # แก้ไขบรรทัดด้านล่างนี้เพื่อขยายเป็น 100 หน้า
+    pages = st.slider("2. Number of Pages", 1, 100, 1) 
     probs = st.selectbox("3. Problems per Page", [12, 15, 18, 21])
     brand = st.text_input("4. Brand/Header Name", "My Learning Studio")
 
-if st.button("Generate Worksheet Bundle"):
-    with st.spinner('Generating PDF with Answer Key...'):
+if st.button("Generate Mega Bundle"):
+    with st.spinner(f'Creating {pages} pages. Please wait...'):
         pdf_bytes = create_full_worksheet(op, pages, probs, brand)
-        st.success(f"Worksheet bundle with {pages} pages is ready!")
+        st.success(f"Success! Your {pages}-page bundle with Answer Key is ready.")
         st.download_button(
-            label="📥 Download PDF (Worksheet + Answer Key)",
+            label="📥 Download Mega PDF",
             data=pdf_bytes,
-            file_name=f"math_practice_bundle.pdf",
+            file_name=f"math_mega_bundle_{pages}_pages.pdf",
             mime="application/pdf"
         )
