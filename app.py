@@ -2,7 +2,7 @@ import streamlit as st
 import random
 from fpdf import FPDF
 
-# --- 1. ตรรกะคณิตศาสตร์ (Dynamic Digits) ---
+# --- 1. ตรรกะคณิตศาสตร์ ---
 def get_math_problem(op_type, digits):
     low = 10**(digits-1) if digits > 1 else 1
     high = (10**digits) - 1
@@ -24,8 +24,8 @@ def get_math_problem(op_type, digits):
         dividend = divisor * ans
         return dividend, divisor, ans, "÷"
 
-# --- 2. ฟังก์ชันสร้าง PDF พร้อมกรอบ (Framed Layout) ---
-def create_framed_worksheet(op_type, num_pages, probs_per_page, brand_name, digits):
+# --- 2. ฟังก์ชันสร้าง PDF ---
+def create_mega_bundle(op_type, num_pages, probs_per_page, brand_name, digits):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     all_answers = []
@@ -34,19 +34,16 @@ def create_framed_worksheet(op_type, num_pages, probs_per_page, brand_name, digi
         pdf.add_page()
         page_answers = []
         
-        # ส่วนหัว: ชื่อแบรนด์ และ ข้อมูลนักเรียน (Name/Class/Date)
+        # หัวกระดาษ
         pdf.set_font("Helvetica", 'B', 20)
         pdf.cell(0, 10, brand_name, ln=True, align='C')
-        pdf.set_font("Helvetica", '', 11)
-        pdf.cell(0, 10, f"Name: __________________________  Class: ________  Date: ________", ln=True, align='C')
-        pdf.set_font("Helvetica", 'B', 12)
-        pdf.cell(0, 8, f"Practice: {op_type} ({digits} Digits) | Page: {p_num + 1}", ln=True, align='C')
-        pdf.ln(5)
+        pdf.set_font("Helvetica", '', 12)
+        pdf.cell(0, 10, f"Practice: {op_type} ({digits} Digits) | Page: {p_num + 1}", ln=True, align='C')
+        pdf.ln(10)
 
-        # การจัดวาง Grid 
-        # ปรับระยะห่างเพื่อให้ใส่กรอบได้สวยงาม
+        # การจัดวาง Grid (3 คอลัมน์)
         col_width = 60
-        row_height = 55
+        row_height = 50
         
         for i in range(probs_per_page):
             n1, n2, res, symbol = get_math_problem(op_type, digits)
@@ -54,33 +51,30 @@ def create_framed_worksheet(op_type, num_pages, probs_per_page, brand_name, digi
             
             col = i % 3
             row = i // 3
-            # จุดเริ่ม X, Y ของแต่ละข้อ
-            x = 20 + (col * col_width)
-            y = 55 + (row * row_height)
+            x = 25 + (col * col_width)
+            y = 50 + (row * row_height)
 
-            # --- วาดกรอบสี่เหลี่ยมมุมมน (Rounded Box) ---
-            pdf.set_draw_color(0, 102, 204) # สีน้ำเงินตามภาพตัวอย่าง
-            pdf.set_line_width(0.6)
-            # พารามิเตอร์: x, y, width, height, radius
-            pdf.round_rect(x, y, 50, 45, 5) 
+            # --- วาดกรอบสี่เหลี่ยมมุมมนรอบโจทย์ ---
+            pdf.set_draw_color(150, 150, 150)
+            pdf.round_rect(x - 5, y - 8, 45, 40, 5) 
 
-            # --- วาดเลขข้อ (มุมซ้ายบนของกรอบ) ---
+            # --- วาดเลขข้อ (ขยับไปมุมบนซ้ายของกรอบ ไม่ทับตัวเลข) ---
             pdf.set_font("Helvetica", 'B', 12)
             pdf.set_text_color(100, 100, 100)
-            pdf.text(x + 3, y + 6, f"{i+1}.") 
+            pdf.text(x - 2, y - 2, f"{i+1}.") 
 
-            # --- วาดโจทย์คณิตศาสตร์ (จัดหลักเลขให้ตรงกัน) ---
+            # --- วาดโจทย์ (จัดหลักเลขให้ตรงกัน) ---
             pdf.set_text_color(0, 0, 0)
             pdf.set_font("Helvetica", '', 18)
-            # ใช้ช่องว่าง (padding) เพื่อให้ตัวเลขชิดขวา
-            pdf.text(x + 25, y + 15, f"{n1:>{digits}}")     # ตัวตั้ง
-            pdf.text(x + 8, y + 22, symbol)                 # เครื่องหมาย
-            pdf.text(x + 25, y + 27, f"{n2:>{digits}}")     # ตัวบวก/ลบ
-            pdf.line(x + 12, y + 31, x + 42, y + 31)        # เส้นใต้โจทย์
+            # ใช้ช่องว่างเพื่อให้หลักหน่วยตรงกันเสมอ
+            pdf.text(x + 22, y + 8, f"{n1:>{digits}}")      # ตัวตั้ง
+            pdf.text(x + 5, y + 15, symbol)                 # เครื่องหมาย
+            pdf.text(x + 22, y + 20, f"{n2:>{digits}}")     # ตัวบวก/ลบ
+            pdf.line(x + 10, y + 23, x + 35, y + 23)        # เส้นใต้โจทย์
         
         all_answers.append(page_answers)
 
-    # --- หน้าเฉลย (Answer Key) ---
+    # --- ส่วนหน้าเฉลย ---
     pdf.add_page()
     pdf.set_font("Helvetica", 'B', 22)
     pdf.cell(0, 15, "ANSWER KEY", ln=True, align='C')
@@ -96,25 +90,25 @@ def create_framed_worksheet(op_type, num_pages, probs_per_page, brand_name, digi
 
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 3. UI ส่วนหน้าเว็บ (Streamlit) ---
-st.set_page_config(page_title="Math Generator Pro", layout="centered")
+# --- 3. UI Streamlit ---
+st.set_page_config(page_title="Professional Math Generator", layout="centered")
 st.title("📚 Professional Math Worksheet Generator")
 
 with st.sidebar:
-    st.header("Settings")
-    op = st.selectbox("Operation", ["Addition (+)", "Subtraction (-)", "Multiplication (x)", "Division (÷)"])
-    num_digits = st.slider("Digits (1-5)", 1, 5, 2)
-    pages = st.slider("Total Pages", 1, 100, 1)
+    st.header("Customization")
+    op = st.selectbox("Select Operation", ["Addition (+)", "Subtraction (-)", "Multiplication (x)", "Division (÷)"])
+    num_digits = st.slider("Number of Digits", 1, 5, 2)
+    pages = st.slider("Number of Pages", 1, 100, 1)
     probs = st.selectbox("Problems per Page", [12, 15, 18])
     brand = st.text_input("Brand Name", "My Learning Studio")
 
-if st.button("Generate Mega Bundle with Frames"):
-    with st.spinner('Building your worksheets...'):
-        pdf_bytes = create_framed_worksheet(op, pages, probs, brand, num_digits)
-        st.success(f"Successfully generated {pages} pages!")
+if st.button("Generate Mega Bundle"):
+    with st.spinner('Creating your professional worksheets...'):
+        pdf_bytes = create_mega_bundle(op, pages, probs, brand, num_digits)
+        st.success(f"Success! {pages} pages generated.")
         st.download_button(
-            label="📥 Download Framed PDF",
+            label="📥 Download PDF with Answer Key",
             data=pdf_bytes,
-            file_name=f"math_bundle_framed.pdf",
+            file_name=f"math_{num_digits}digits_bundle.pdf",
             mime="application/pdf"
         )
